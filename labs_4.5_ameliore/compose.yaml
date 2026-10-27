@@ -1,0 +1,48 @@
+services:
+  express:
+    build: ./express
+    ports:
+      - "3000:3000"
+    environment:
+      FLASK_URL: http://flask:5000
+      SPRING_URL: http://spring:8080
+    depends_on:
+      - flask
+      - spring
+
+  flask:
+    build: ./flask
+    environment:
+      REDIS_HOST: redis
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: polyglot
+      SPRING_URL: http://spring:8080
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      spring:
+        condition: service_started
+
+  spring:
+    build:
+      context: ./spring
+      args:
+        JAVA_VERSION: "17"
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: polyglot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d polyglot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
